@@ -4,7 +4,7 @@ defmodule Validate do
   """
   alias Validate.Validator.{Error, Arg}
 
-  @fns ~w[between cast characters date_string digits_between digits ends_with in ip lowercase max_digits max min_digits min not_ends_with not_in not_regex not_starts_with nullable regex required size starts_with type uppercase url uuid]
+  @fns ~w[between cast characters date_string digits_between digits ends_with in ip lowercase max_digits max min_digits min not_ends_with not_in not_regex not_starts_with nullable regex required size starts_with type uppercase url uuid atomize]
 
   @doc """
   Validates an input against a given list of rules
@@ -129,7 +129,7 @@ defmodule Validate do
   defp run_validator_rule(opts) do
     handler = get_handler(opts)
 
-    result = handler.(%Arg{value: opts.value, arg: opts.arg, input: opts.input})
+    result = handler.(%Arg{value: opts.value, arg: opts.arg, input: opts.input, rules: opts.rules})
 
     path = if opts.valueName != nil, do: [opts.valueName], else: []
     path = opts.path ++ path

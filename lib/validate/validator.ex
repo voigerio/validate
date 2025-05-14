@@ -10,7 +10,7 @@ defmodule Validate.Validator do
 
   defmodule Arg do
     @moduledoc false
-    defstruct value: nil, arg: nil, input: nil
+    defstruct value: nil, arg: nil, input: nil, rules: nil
   end
 
   @doc """
