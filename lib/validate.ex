@@ -142,7 +142,8 @@ defmodule Validate do
   defp run_validator_rule(opts) do
     handler = get_handler(opts)
 
-    result = handler.(%Arg{value: opts.value, arg: opts.arg, input: opts.input, rules: opts.rules})
+    result =
+      handler.(%Arg{value: opts.value, arg: opts.arg, input: opts.input, rules: opts.rules})
 
     path = if opts.valueName != nil, do: [opts.valueName], else: []
     path = opts.path ++ path
