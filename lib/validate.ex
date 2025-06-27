@@ -124,17 +124,33 @@ defmodule Validate do
       path = if opts.valueName != nil, do: [opts.valueName], else: []
       path = opts.path ++ path
 
+      skip = Keyword.get(subRules, :optional) && !Map.has_key?(opts.value, subKey)
+
       {data, errors} =
-        validate_single_input(%{
-          value: Map.get(opts.value, subKey),
-          valueName: subKey,
-          rules: subRules,
-          input: opts.input,
-          path: path
-        })
+        cond do
+          skip ->
+            {nil, []}
+          Keyword.has_key?(subRules, :optional) ->
+            validate_single_input(%{
+              value: Map.get(opts.value, subKey),
+              valueName: subKey,
+              rules: Keyword.delete(subRules, :optional),
+              input: opts.input,
+              path: path
+            })
+          true ->
+            validate_single_input(%{
+              value: Map.get(opts.value, subKey),
+              valueName: subKey,
+              rules: subRules,
+              input: opts.input,
+              path: path
+          })
+        end
 
       cond do
         Enum.count(errors) > 0 -> {:error, filteredValue, allErrors ++ errors}
+        skip -> {:ok, filteredValue, allErrors}
         true -> {:ok, Map.put(filteredValue, subKey, data), allErrors}
       end
     end)
