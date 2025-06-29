@@ -124,28 +124,34 @@ defmodule Validate do
       path = if opts.valueName != nil, do: [opts.valueName], else: []
       path = opts.path ++ path
 
-      skip = Keyword.get(subRules, :optional) && !Map.has_key?(opts.value, subKey)
-
-      {data, errors} =
+      [skip, {data, errors}] =
         cond do
-          skip ->
-            {nil, []}
-          Keyword.has_key?(subRules, :optional) ->
-            validate_single_input(%{
-              value: Map.get(opts.value, subKey),
-              valueName: subKey,
-              rules: Keyword.delete(subRules, :optional),
-              input: opts.input,
-              path: path
-            })
+          Keyword.has_key?(subRules, :presence) ->
+            presence = Keyword.get(subRules, :presence)
+            subRules = Keyword.delete(subRules, :presence)
+            cond do
+              presence == :must and !Map.has_key?(opts.value, subKey) -> [true, {nil, [%Error{
+                path: path ++ [subKey],
+                rule: :presence,
+                message: "must present"
+              }]}]
+              presence == :optional and !Map.has_key?(opts.value, subKey) -> [true, {nil, []}]
+              true -> [false, validate_single_input(%{
+                value: Map.get(opts.value, subKey),
+                valueName: subKey,
+                rules: subRules,
+                input: opts.input,
+                path: path
+              })]
+            end
           true ->
-            validate_single_input(%{
+            [false, validate_single_input(%{
               value: Map.get(opts.value, subKey),
               valueName: subKey,
               rules: subRules,
               input: opts.input,
               path: path
-          })
+          })]
         end
 
       cond do
