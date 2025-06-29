@@ -83,14 +83,13 @@ defmodule Validate do
 
     {value, errors} =
       if opts.rules[:type] == :map do
+        original = opts.value
         opts = %{
-          value: opts.value,
-          unknown: Keyword.get(opts.rules, :unknown, :remove),
-          rules: opts.rules[:map],
+          rules: opts.rules,
           path: opts.path ++ [opts.valueName]
         }
 
-        handle_unknown(opts.value, value, errors, opts)
+        handle_unknown(original, value, errors, opts)
       else
         {value, errors}
       end
@@ -205,9 +204,18 @@ defmodule Validate do
   end
 
   defp handle_unknown(original, result, errors, opts) do
-    case opts.unknown do
+    atomize = Keyword.get(opts.rules, :atomize, false)
+    unknown = Keyword.get(opts.rules, :unknown, :allow)
+    case unknown do
       :reject ->
-        unknown_keys = Map.keys(original) -- Map.keys(opts.rules)
+        rule_keys = Map.keys(opts.rules[:map] || %{})
+        expected_keys =
+          if atomize do
+            rule_keys ++ Enum.map(Enum.filter(rule_keys, fn key -> is_atom(key) end), &Atom.to_string/1)
+          else
+            rule_keys
+          end
+        unknown_keys = Map.keys(original) -- expected_keys
 
         if unknown_keys == [] do
           {result, errors}
@@ -224,14 +232,29 @@ defmodule Validate do
         end
 
       :allow ->
-        extra_keys = Map.drop(original, Map.keys(opts.rules))
+        rule_keys = Map.keys(opts.rules[:map] || %{})
+        expected_keys =
+          if atomize do
+            rule_keys ++ Enum.map(Enum.filter(rule_keys, fn key -> is_atom(key) end), &Atom.to_string/1)
+          else
+            rule_keys
+          end
+        extra_keys = Map.drop(original, expected_keys)
         {Map.merge(result, extra_keys), errors}
 
       :remove ->
-        {result, errors}
+        rule_keys = Map.keys(opts.rules[:map] || %{})
+        expected_keys =
+          if atomize do
+            rule_keys ++ Enum.map(Enum.filter(rule_keys, fn key -> is_atom(key) end), &Atom.to_string/1)
+          else
+            rule_keys
+          end
+        unknown_keys = Map.keys(original) -- expected_keys
+        {Map.drop(result, unknown_keys), errors}
 
       _ ->
-        raise "invalid unknown mode: #{opts.unknown}"
+        raise "invalid unknown mode: #{unknown}"
     end
   end
 end
