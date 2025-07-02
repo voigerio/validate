@@ -81,19 +81,6 @@ defmodule Validate do
         end
       end)
 
-    {value, errors} =
-      if opts.rules[:type] == :map do
-        original = opts.value
-        opts = %{
-          rules: opts.rules,
-          path: opts.path ++ [opts.valueName]
-        }
-
-        handle_unknown(original, value, errors, opts)
-      else
-        {value, errors}
-      end
-
     {value, errors}
   end
 
@@ -200,61 +187,6 @@ defmodule Validate do
       &module.validate/1
     else
       raise "#{rule} validator does not exist"
-    end
-  end
-
-  defp handle_unknown(original, result, errors, opts) do
-    atomize = Keyword.get(opts.rules, :atomize, false)
-    unknown = Keyword.get(opts.rules, :unknown, :allow)
-    case unknown do
-      :reject ->
-        rule_keys = Map.keys(opts.rules[:map] || %{})
-        expected_keys =
-          if atomize do
-            rule_keys ++ Enum.map(Enum.filter(rule_keys, fn key -> is_atom(key) end), &Atom.to_string/1)
-          else
-            rule_keys
-          end
-        unknown_keys = Map.keys(original) -- expected_keys
-
-        if unknown_keys == [] do
-          {result, errors}
-        else
-          {result,
-           errors ++
-             Enum.map(unknown_keys, fn key ->
-               %Error{
-                 path: opts.path ++ [key],
-                 rule: :unknown,
-                 message: "unknown key"
-               }
-             end)}
-        end
-
-      :allow ->
-        rule_keys = Map.keys(opts.rules[:map] || %{})
-        expected_keys =
-          if atomize do
-            rule_keys ++ Enum.map(Enum.filter(rule_keys, fn key -> is_atom(key) end), &Atom.to_string/1)
-          else
-            rule_keys
-          end
-        extra_keys = Map.drop(original, expected_keys)
-        {Map.merge(result, extra_keys), errors}
-
-      :remove ->
-        rule_keys = Map.keys(opts.rules[:map] || %{})
-        expected_keys =
-          if atomize do
-            rule_keys ++ Enum.map(Enum.filter(rule_keys, fn key -> is_atom(key) end), &Atom.to_string/1)
-          else
-            rule_keys
-          end
-        unknown_keys = Map.keys(original) -- expected_keys
-        {Map.drop(result, unknown_keys), errors}
-
-      _ ->
-        raise "invalid unknown mode: #{unknown}"
     end
   end
 end

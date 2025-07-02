@@ -14,7 +14,26 @@ defmodule ValidateTest.UnknownTest do
     }
 
     assert {:error, errors} = Validate.validate(input, rules)
-    assert [%Validate.Validator.Error{path: ["name"], message: "unknown key", rule: :unknown}] = errors
+    assert [%Validate.Validator.Error{path: [], message: "unknown keys: name", rule: :unknown}] = errors
+  end
+
+  test "it does not validate when unwanted key is present in map with unknown reject" do
+    rules = [
+      type: :map,
+      unknown: :reject,
+      map: %{
+        name: [type: :map, unknown: :reject]
+      }
+    ]
+
+    input = %{
+      name: %{
+        "phone" => "99"
+      }
+    }
+
+    assert {:error, errors} = Validate.validate(input, rules)
+    assert [%Validate.Validator.Error{path: [:name], message: "unknown keys: phone", rule: :unknown}] = errors
   end
 
   test "it does not validate when unwanted key is present in nested map with unknown reject" do
@@ -27,13 +46,14 @@ defmodule ValidateTest.UnknownTest do
     ]
 
     input = %{
-      "name" => %{
-        "phone" => "99"
+      name: %{
+        "age" => "99",
+        "phone" => "99",
       }
     }
 
     assert {:error, errors} = Validate.validate(input, rules)
-    assert [%Validate.Validator.Error{path: ["name"], message: "unknown key", rule: :unknown}] = errors
+    assert [%Validate.Validator.Error{path: [:name], message: "unknown keys: age, phone", rule: :unknown}] = errors
   end
 
   test "it does validate when key is string and atomize rule is on with unknown reject" do
@@ -88,15 +108,15 @@ defmodule ValidateTest.UnknownTest do
     }
 
     assert {:error, errors} = Validate.validate(input, rules)
-    assert [%Validate.Validator.Error{path: ["age"], message: "unknown key", rule: :unknown}] = errors
+    assert [%Validate.Validator.Error{path: [], message: "unknown keys: age", rule: :unknown}] = errors
   end
 
   test "it does validate when unwanted key is present with unknown allow" do
     rules = [
       type: :map,
-      unknown: :allow,
       map: %{
-      }
+      },
+      unknown: :allow
     ]
 
     input = %{
@@ -146,10 +166,10 @@ defmodule ValidateTest.UnknownTest do
     rules = [
       type: :map,
       atomize: true,
-      unknown: :allow,
       map: %{
         name: []
-      }
+      },
+      unknown: :allow
     ]
 
     input = %{
@@ -160,6 +180,24 @@ defmodule ValidateTest.UnknownTest do
     {:ok, result} = Validate.validate(input, rules)
     assert %{:name => "hi", "age" => "90"} = result
     assert !Map.has_key?(result, "name")
+  end
+
+  test "it does validate when key is extra and without atomize rule is on with unknown allow" do
+    rules = [
+      type: :map,
+      map: %{
+        name: []
+      },
+      unknown: :allow
+    ]
+
+    input = %{
+      "name" => "hi",
+      "age" => "90"
+    }
+
+    {:ok, result} = Validate.validate(input, rules)
+    assert %{:name => nil, "name" => "hi", "age" => "90"} = result
   end
 
   test "it does validate when unwanted key is present with unknown remove" do
