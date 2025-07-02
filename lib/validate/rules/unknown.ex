@@ -3,13 +3,34 @@ defmodule Validate.Rules.Unknown do
 
   import Validate.Validator
 
-  # Dummy one to not panic with unknown validator not present.
-  # We cannot fully rely upon this style like other validators
-  # as the map value gets modified in cases like unknown: allow
-  # which distracts the other validators.
-  # Hence an explcit validator added on the validator.ex to handle
-  # at the end of the map validation
-  def validate(%{value: value}) do
-    success(value)
+  def validate(%{value: value, arg: :allow, input: input, rules: rules}) do
+    atomize = Keyword.get(rules, :atomize)
+
+    exclude_keys = if atomize do
+      Map.keys(value) ++ rules |> Keyword.get(:map, %{}) |> Map.keys() |> Enum.map(&Atom.to_string/1)
+    else
+      Map.keys(value)
+    end
+
+    success(Map.merge(value, Map.drop(input, exclude_keys)))
+  end
+
+  def validate(%{value: value, arg: :remove, rules: rules}) do
+    expected = Map.keys(Keyword.get(rules, :map, %{}))
+    actual = Map.keys(value)
+    unknowns = actual -- expected
+    success(Map.drop(value, unknowns))
+  end
+
+  def validate(%{value: value, arg: :reject, rules: rules}) do
+    expected = Map.keys(Keyword.get(rules, :map, %{}))
+    actual = Map.keys(value)
+    unknown = actual -- expected
+
+    if (unknown) == [] do
+      success(value)
+    else
+      error("unknown keys: #{Enum.join(unknown, ", ")}")
+    end
   end
 end

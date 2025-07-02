@@ -81,20 +81,6 @@ defmodule Validate do
         end
       end)
 
-    {value, errors} =
-      if opts.rules[:type] == :map do
-        opts = %{
-          value: opts.value,
-          unknown: Keyword.get(opts.rules, :unknown, :remove),
-          rules: opts.rules[:map],
-          path: opts.path ++ [opts.valueName]
-        }
-
-        handle_unknown(opts.value, value, errors, opts)
-      else
-        {value, errors}
-      end
-
     {value, errors}
   end
 
@@ -201,37 +187,6 @@ defmodule Validate do
       &module.validate/1
     else
       raise "#{rule} validator does not exist"
-    end
-  end
-
-  defp handle_unknown(original, result, errors, opts) do
-    case opts.unknown do
-      :reject ->
-        unknown_keys = Map.keys(original) -- Map.keys(opts.rules)
-
-        if unknown_keys == [] do
-          {result, errors}
-        else
-          {result,
-           errors ++
-             Enum.map(unknown_keys, fn key ->
-               %Error{
-                 path: opts.path ++ [key],
-                 rule: :unknown,
-                 message: "unknown key"
-               }
-             end)}
-        end
-
-      :allow ->
-        extra_keys = Map.drop(original, Map.keys(opts.rules))
-        {Map.merge(result, extra_keys), errors}
-
-      :remove ->
-        {result, errors}
-
-      _ ->
-        raise "invalid unknown mode: #{opts.unknown}"
     end
   end
 end
