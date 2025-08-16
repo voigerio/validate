@@ -58,4 +58,15 @@ defmodule ValidateTest.Rules.AtomizeTest do
 
     assert Validate.validate(input, rules) == success(%{:key => "atom key value"})
   end
+
+  test "it fails whem map not defined" do
+    rules = [
+      type: :map,
+      atomize: true
+    ]
+
+    input = %{}
+
+    assert Validate.validate(input, rules) ==  {:error, [%Validate.Validator.Error{path: [], message: "must be a map", rule: :atomize}]}
+  end
 end
