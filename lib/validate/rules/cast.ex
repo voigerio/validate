@@ -35,7 +35,14 @@ defmodule Validate.Rules.Cast do
   end
 
   defp convert!(:boolean, value) do
-    if value, do: true, else: false
+    case value do
+      false -> false
+      "false" -> false
+      "0" -> false
+      0 -> false
+      nil -> false
+      _ -> true
+    end
   end
 
   defp convert!(:float, value) do
